@@ -435,6 +435,25 @@
           idx++;
         }
 
+        let rows = [];
+        for (let idx = 0; idx < aligned1.length; idx++) {
+          rows.push({
+            p1: aligned1[idx],
+            p2: aligned2[idx],
+            isDiff1: diffIndices1.includes(idx),
+            isDiff2: diffIndices2.includes(idx)
+          });
+        }
+        
+        // 将有差异的参数行排在前面，保持原有字典序作为第二排序优先级
+        rows.sort((a, b) => {
+          const aDiff = a.isDiff1 || a.isDiff2;
+          const bDiff = b.isDiff1 || b.isDiff2;
+          if (aDiff && !bDiff) return -1;
+          if (!aDiff && bDiff) return 1;
+          return 0; // 相等时借助外层数组原本已排好的顺序 (稳定排序)
+        });
+
         const validCount1 = aligned1.filter(p => p !== null).length;
         const validCount2 = aligned2.filter(p => p !== null).length;
         
@@ -460,11 +479,8 @@
           // 统一的带滚动条清单
           content += `<div class="flex flex-col gap-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">`;
           
-          for (let i = 0; i < aligned1.length; i++) {
-            const p1 = aligned1[i];
-            const p2 = aligned2[i];
-            const isDiff1 = diffIndices1.includes(i);
-            const isDiff2 = diffIndices2.includes(i);
+          for (let i = 0; i < rows.length; i++) {
+            const { p1, p2, isDiff1, isDiff2 } = rows[i];
             
             content += `<div class="grid grid-cols-2 gap-4">`;
             
