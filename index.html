@@ -37,6 +37,7 @@
   </script>
   <style>
     body {
+      overflow-y: scroll;
       background-color: #0f172a;
       background-image: 
         radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
@@ -132,7 +133,7 @@
     }
   </style>
 </head>
-<body class="antialiased selection:bg-brand-500 selection:text-white flex flex-col items-center justify-center p-4 md:p-8">
+<body class="antialiased selection:bg-brand-500 selection:text-white flex flex-col items-center justify-start pt-12 md:pt-20 lg:pt-28 p-4 md:p-8">
 
   <div class="max-w-6xl w-full mx-auto flex flex-col gap-4 md:gap-6 relative">
     
@@ -160,14 +161,6 @@
 
     <!-- Main Content -->
     <main id="main-panel" class="glass-panel rounded-3xl p-5 md:p-6 relative w-full border-slate-700/50 transition-colors duration-500">
-      
-      <!-- Big Immediate Status Banner -->
-      <div id="global-status-banner" class="w-full flex items-center justify-center overflow-hidden transition-all duration-500 max-h-0 opacity-0 mb-0">
-        <div class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border text-sm md:text-base font-bold shadow-lg w-auto whitespace-nowrap">
-          <i id="global-status-icon" data-lucide="check-circle" class="w-5 h-5"></i>
-          <span id="global-status-text">判定结果</span>
-        </div>
-      </div>
 
       <!-- Central Status Indicator (Desktop) -->
       <div class="status-indicator-desktop absolute z-20 hidden md:flex flex-col items-center justify-center pointer-events-none transition-transform duration-300">
@@ -220,6 +213,14 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Big Immediate Status Banner -->
+      <div id="global-status-banner" class="w-full flex items-center justify-center overflow-hidden transition-all duration-500 max-h-0 opacity-0 mt-0">
+        <div class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border text-sm md:text-base font-bold shadow-lg w-auto whitespace-nowrap">
+          <i id="global-status-icon" data-lucide="check-circle" class="w-5 h-5"></i>
+          <span id="global-status-text">判定结果</span>
+        </div>
       </div>
 
       <!-- Result Detail Summary -->
@@ -298,8 +299,8 @@
       
       // 重置大横幅与全局发光状态
       if (globalBanner) {
-        globalBanner.classList.remove('max-h-20', 'opacity-100', 'mb-6');
-        globalBanner.classList.add('max-h-0', 'opacity-0', 'mb-0');
+        globalBanner.classList.remove('max-h-20', 'opacity-100', 'mt-8');
+        globalBanner.classList.add('max-h-0', 'opacity-0', 'mt-0');
         if (globalBannerChild) globalBannerChild.className = "flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border text-sm md:text-base font-bold shadow-lg w-auto whitespace-nowrap transition-colors";
       }
       
@@ -328,8 +329,8 @@
         
         // 强感知的全局状态设计
         if (globalBanner) {
-          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mb-0');
-          globalBanner.classList.add('max-h-20', 'opacity-100', 'mb-6');
+          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mt-0');
+          globalBanner.classList.add('max-h-20', 'opacity-100', 'mt-8');
           if (globalBannerChild) globalBannerChild.classList.add('bg-green-500/20', 'text-green-400', 'border-green-500/30');
         }
         if (globalText) globalText.textContent = "两个链接本质上完全一致 MATCH!";
@@ -353,8 +354,8 @@
         
         // 强感知的全局状态设计
         if (globalBanner) {
-          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mb-0');
-          globalBanner.classList.add('max-h-20', 'opacity-100', 'mb-6');
+          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mt-0');
+          globalBanner.classList.add('max-h-20', 'opacity-100', 'mt-8');
           if (globalBannerChild) globalBannerChild.classList.add('bg-red-500/20', 'text-red-400', 'border-red-500/30');
         }
         if (globalText) globalText.textContent = "两个链接不相同 MISMATCH!";
