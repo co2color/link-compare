@@ -1,11 +1,497 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>智能链接比对工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0d9488',
+              900: '#134e4a',
+              950: '#042f2e',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0f172a;
+      background-image: 
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.1) 0, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(339,49%,30%,0.1) 0, transparent 50%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      color: #f8fafc;
+    }
+    
+    .glass-panel {
+      background: rgba(30, 41, 59, 0.4);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .textarea-container {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .textarea-container::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: 0.75rem;
+      padding: 1px;
+      background: linear-gradient(to bottom right, rgba(255,255,255,0.1), rgba(255,255,255,0.01));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .textarea-container:focus-within::before {
+      background: linear-gradient(to bottom right, #2dd4bf, #3b82f6);
+    }
+
+    textarea {
+      background: rgba(15, 23, 42, 0.6);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+    }
+    
+    textarea:focus {
+      outline: none;
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .status-match {
+      box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .status-mismatch {
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .status-neutral {
+      box-shadow: 0 0 30px rgba(148, 163, 184, 0.1);
+      border-color: rgba(148, 163, 184, 0.2);
+      background: rgba(148, 163, 184, 0.05);
+    }
+
+    .status-indicator-desktop {
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
 </head>
-<body>
-  <div>xxxx</div>
+<body class="antialiased selection:bg-brand-500 selection:text-white flex flex-col items-center justify-center p-4 md:p-8">
+
+  <div class="max-w-6xl w-full mx-auto flex flex-col gap-4 md:gap-6 relative">
+    
+    <!-- Header -->
+    <header class="text-center space-y-2 mt-4 relative z-10 flex flex-col items-center">
+      <div class="flex items-center justify-center gap-3">
+        <div class="inline-flex items-center justify-center p-2 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
+          <i data-lucide="link-2" class="w-5 h-5"></i>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 drop-shadow-sm">
+          URL Equivalence
+        </h1>
+      </div>
+      <p class="text-slate-400 max-w-xl mx-auto text-sm">
+        智能分析监测链接，参数乱序亦可精准识别。
+      </p>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-panel" class="glass-panel rounded-3xl p-5 md:p-6 relative w-full border-slate-700/50 transition-colors duration-500">
+      
+      <!-- Big Immediate Status Banner -->
+      <div id="global-status-banner" class="w-full flex items-center justify-center overflow-hidden transition-all duration-500 max-h-0 opacity-0 mb-0">
+        <div class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border text-sm md:text-base font-bold shadow-lg w-auto whitespace-nowrap">
+          <i id="global-status-icon" data-lucide="check-circle" class="w-5 h-5"></i>
+          <span id="global-status-text">判定结果</span>
+        </div>
+      </div>
+
+      <!-- Central Status Indicator (Desktop) -->
+      <div class="status-indicator-desktop absolute z-20 hidden md:flex flex-col items-center justify-center pointer-events-none transition-transform duration-300">
+        <div id="status-indicator-desktop" class="status-neutral backdrop-blur-md rounded-full w-16 h-16 flex items-center justify-center transition-all duration-500 transform shadow-xl">
+          <i data-lucide="arrow-left-right" id="status-icon-desktop" class="w-6 h-6 text-slate-400 transition-colors duration-300"></i>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 relative z-10">
+        
+        <!-- Link 1 -->
+        <div class="flex flex-col gap-2 group">
+          <label for="link1" class="flex items-center justify-between text-sm font-medium text-slate-300 ml-1 transition-colors group-focus-within:text-brand-400">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-slate-800 text-[10px] flex items-center justify-center border border-slate-700 shadow-inner group-focus-within:border-brand-500/50 group-focus-within:bg-brand-500/10 transition-colors">1</span>
+              源链接 (Source Link)
+            </div>
+          </label>
+          <div id="container1" class="textarea-container rounded-xl shadow-lg transition-all duration-500 border border-transparent">
+            <textarea 
+              id="link1" 
+              rows="9" 
+              class="w-full resize-none rounded-xl p-4 text-slate-200 font-mono text-sm leading-relaxed transition-all duration-300 border border-transparent placeholder:text-slate-600 focus:shadow-[0_0_20px_rgba(45,212,191,0.15)]"
+              placeholder="https://example.com/api/track?source=app&campaign=spring..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Mobile Status Indicator -->
+        <div class="flex md:hidden justify-center items-center py-0 z-20 hidden"> <!-- Hidden entirely to favor big banner -->
+        </div>
+
+        <!-- Link 2 -->
+        <div class="flex flex-col gap-2 group">
+          <label for="link2" class="flex items-center justify-between text-sm font-medium text-slate-300 ml-1 transition-colors group-focus-within:text-brand-400">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-slate-800 text-[10px] flex items-center justify-center border border-slate-700 shadow-inner group-focus-within:border-brand-500/50 group-focus-within:bg-brand-500/10 transition-colors">2</span>
+              比对链接 (Target Link)
+            </div>
+          </label>
+          <div id="container2" class="textarea-container rounded-xl shadow-lg transition-all duration-500 border border-transparent">
+            <textarea 
+              id="link2" 
+              rows="9" 
+              class="w-full resize-none rounded-xl p-4 text-slate-200 font-mono text-sm leading-relaxed transition-all duration-300 border border-transparent placeholder:text-slate-600 focus:shadow-[0_0_20px_rgba(45,212,191,0.15)]"
+              placeholder="https://example.com/api/track?medium=cpc&source=app..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Result Detail Summary -->
+      <div id="result-summary" class="mt-6 overflow-hidden transition-all duration-500 max-h-0 opacity-0 transform translate-y-4">
+        <div class="bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-2xl p-5 md:p-6 shadow-xl">
+          <h3 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2 border-b border-slate-700/50 pb-3">
+            <div class="p-1.5 rounded-lg bg-brand-500/20 text-brand-400">
+              <i data-lucide="microscope" class="w-4 h-4"></i>
+            </div>
+            深入分析结果
+          </h3>
+          <div id="analysis-content" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-mono break-all">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="text-center text-slate-500 text-xs md:text-sm mt-4 md:mt-8 tracking-wide font-medium flex items-center justify-center gap-2">
+      <i data-lucide="sparkles" class="w-4 h-4"></i>
+      High Quality UI/UX • Real-time Param Checker
+    </footer>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    const link1Input = document.getElementById('link1');
+    const link2Input = document.getElementById('link2');
+    const indDesktop = document.getElementById('status-indicator-desktop');
+    const iconDesktop = document.getElementById('status-icon-desktop');
+    const resultSummary = document.getElementById('result-summary');
+    const analysisContent = document.getElementById('analysis-content');
+
+    const mainPanel = document.getElementById('main-panel');
+    const globalBanner = document.getElementById('global-status-banner');
+    const globalBannerChild = globalBanner.firstElementChild;
+    const globalText = document.getElementById('global-status-text');
+    const globalIcon = document.getElementById('global-status-icon');
+    const container1 = document.getElementById('container1');
+    const container2 = document.getElementById('container2');
+
+    // 解析URL函数
+    function parseCustomUrl(urlStr) {
+      if (!urlStr || !urlStr.trim()) return null;
+      
+      const [base, ...queryParts] = urlStr.trim().split('?');
+      const query = queryParts.join('?'); // 处理带多个?的异常情况
+      
+      let params = [];
+      if (query) {
+        params = query.split('&').map(part => {
+          const idx = part.indexOf('=');
+          if (idx === -1) return { key: decodeURIComponent(part), value: '' };
+          return { 
+            key: decodeURIComponent(part.substring(0, idx)), 
+            value: decodeURIComponent(part.substring(idx + 1))
+          };
+        }).filter(p => p.key !== '');
+      }
+      
+      // 排序参数以便比对
+      params.sort((a, b) => a.key.localeCompare(b.key) || a.value.localeCompare(b.value));
+      
+      return { base, params };
+    }
+
+    // 更新UI样式和图标
+    function updateState(state) {
+      // 移除旧状态
+      if (indDesktop) indDesktop.classList.remove('status-neutral', 'status-match', 'status-mismatch', 'scale-110', 'scale-90');
+      if (iconDesktop) iconDesktop.classList.remove('text-slate-400', 'text-green-500', 'text-red-500', 'text-green-400', 'text-red-400');
+      
+      // 重置大横幅与全局发光状态
+      if (globalBanner) {
+        globalBanner.classList.remove('max-h-20', 'opacity-100', 'mb-6');
+        globalBanner.classList.add('max-h-0', 'opacity-0', 'mb-0');
+        if (globalBannerChild) globalBannerChild.className = "flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border text-sm md:text-base font-bold shadow-lg w-auto whitespace-nowrap transition-colors";
+      }
+      
+      [container1, container2].forEach(c => {
+         if (c) c.classList.remove('shadow-[0_0_30px_rgba(34,197,94,0.15)]', 'shadow-[0_0_30px_rgba(239,68,68,0.15)]', '!border-green-500/50', '!border-red-500/50');
+      });
+
+      if (state === 'empty' || state === 'partial') {
+        if (indDesktop) indDesktop.classList.add('status-neutral');
+        if (iconDesktop) {
+          iconDesktop.classList.add('text-slate-400');
+          iconDesktop.setAttribute('data-lucide', 'arrow-left-right');
+        }
+        
+        if (resultSummary) {
+          resultSummary.classList.remove('max-h-[800px]', 'opacity-100', 'translate-y-0');
+          resultSummary.classList.add('max-h-0', 'opacity-0', 'translate-y-4');
+        }
+      } 
+      else if (state === 'match') {
+        if (indDesktop) indDesktop.classList.add('status-match', 'scale-110');
+        if (iconDesktop) {
+          iconDesktop.classList.add('text-green-400');
+          iconDesktop.setAttribute('data-lucide', 'check');
+        }
+        
+        // 强感知的全局状态设计
+        if (globalBanner) {
+          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mb-0');
+          globalBanner.classList.add('max-h-20', 'opacity-100', 'mb-6');
+          if (globalBannerChild) globalBannerChild.classList.add('bg-green-500/20', 'text-green-400', 'border-green-500/30');
+        }
+        if (globalText) globalText.textContent = "两个链接本质上完全一致 MATCH!";
+        if (globalIcon) globalIcon.setAttribute('data-lucide', 'check-circle-2');
+        
+        [container1, container2].forEach(c => {
+           if (c) c.classList.add('shadow-[0_0_30px_rgba(34,197,94,0.15)]', '!border-green-500/50');
+        });
+        
+        if (resultSummary) {
+          resultSummary.classList.add('max-h-[800px]', 'opacity-100', 'translate-y-0');
+          resultSummary.classList.remove('max-h-0', 'opacity-0', 'translate-y-4');
+        }
+      } 
+      else if (state === 'mismatch') {
+        if (indDesktop) indDesktop.classList.add('status-mismatch', 'scale-90');
+        if (iconDesktop) {
+          iconDesktop.classList.add('text-red-400');
+          iconDesktop.setAttribute('data-lucide', 'x');
+        }
+        
+        // 强感知的全局状态设计
+        if (globalBanner) {
+          globalBanner.classList.remove('max-h-0', 'opacity-0', 'mb-0');
+          globalBanner.classList.add('max-h-20', 'opacity-100', 'mb-6');
+          if (globalBannerChild) globalBannerChild.classList.add('bg-red-500/20', 'text-red-400', 'border-red-500/30');
+        }
+        if (globalText) globalText.textContent = "两个链接不相同 MISMATCH!";
+        if (globalIcon) globalIcon.setAttribute('data-lucide', 'x-circle');
+
+        [container1, container2].forEach(c => {
+           if (c) c.classList.add('shadow-[0_0_30px_rgba(239,68,68,0.15)]', '!border-red-500/50');
+        });
+
+        if (resultSummary) {
+          resultSummary.classList.add('max-h-[800px]', 'opacity-100', 'translate-y-0');
+          resultSummary.classList.remove('max-h-0', 'opacity-0', 'translate-y-4');
+        }
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function renderAnalysis(p1, p2, isMatch, reason) {
+      if (!p1 || !p2) return;
+      
+      let html = '';
+      
+      if (!isMatch && reason === 'base_mismatch') {
+        html += `
+          <div class="col-span-1 md:col-span-2 p-4 bg-red-500/10 rounded-xl border border-red-500/30 text-red-300">
+            <div class="font-bold flex items-center gap-2 mb-3 text-red-400 text-base">
+              <i data-lucide="shield-alert" class="w-5 h-5"></i> 核心基础路径 (Base URL) 不一致，无需继续对比参数。
+            </div>
+            <div class="space-y-3 bg-red-950/30 p-3 rounded-lg">
+              <div class="text-slate-400"><span class="inline-block w-14 font-medium">链接 1</span> <span class="text-slate-200">${p1.base}</span></div>
+              <div class="text-slate-400 border-t border-red-500/10 pt-3"><span class="inline-block w-14 font-medium">链接 2</span> <span class="text-slate-200">${p2.base}</span></div>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="col-span-1 md:col-span-2 p-3 pb-4 bg-slate-800/40 rounded-xl border border-slate-700/50 text-center">
+            <div class="inline-flex items-center gap-2 text-slate-400 text-xs uppercase tracking-widest font-semibold mb-2">Base URL 相同</div>
+            <div class="text-slate-200 text-sm opacity-90">${p1.base}</div>
+          </div>
+        `;
+        
+        // 渲染参数列表
+        const renderParams = (params, title, diffIndices = []) => {
+          let content = `<div class="p-4 bg-slate-800/60 rounded-xl border border-slate-700 shadow-inner h-full">`;
+          content += `<div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-3">
+            <span class="text-slate-300 font-semibold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-slate-500"></i>${title} 参数</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-700/50 text-brand-400 text-xs font-bold leading-none">${params.length} 个</span>
+          </div>`;
+          
+          if (params.length === 0) {
+            content += `<div class="text-slate-500 italic text-center py-6">无携带参数</div>`;
+          } else {
+            content += `<div class="flex flex-col gap-2">`;
+            params.forEach((p, i) => {
+              const isDiff = diffIndices.includes(i);
+              const bgClass = isDiff ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900/50 border-slate-700/50';
+              const textKeyClass = isDiff ? 'text-red-300' : 'text-slate-400';
+              const textValClass = isDiff ? 'text-red-200 font-medium' : 'text-slate-200';
+              
+              content += `
+                <div class="flex p-2 rounded-lg border ${bgClass} transition-colors">
+                  <span class="${textKeyClass} w-2/5 pr-2 opacity-90 truncate" title="${p.key}">${p.key}</span>
+                  <span class="w-4 text-center text-slate-600 mr-2">=</span>
+                  <span class="${textValClass} flex-1 truncate" title="${p.value}">${p.value || '<i class="text-slate-600 text-xs">空</i>'}</span>
+                </div>
+              `;
+            });
+            content += `</div>`;
+          }
+          content += `</div>`;
+          return content;
+        };
+
+        let diffIndices1 = [];
+        let diffIndices2 = [];
+        if (!isMatch && reason === 'param_mismatch') {
+          // Find mismatches in sorted arrays up to the shortest length
+          const len = Math.max(p1.params.length, p2.params.length);
+          for(let i=0; i<len; i++) {
+            const p1p = p1.params[i];
+            const p2p = p2.params[i];
+            if(!p1p || !p2p || p1p.key !== p2p.key || p1p.value !== p2p.value) {
+              if (p1p) diffIndices1.push(i);
+              if (p2p) diffIndices2.push(i);
+            }
+          }
+        }
+
+        html += renderParams(p1.params, '源链接 (排序后)', diffIndices1);
+        html += renderParams(p2.params, '比对链接 (排序后)', diffIndices2);
+        
+        if (!isMatch && reason === 'param_mismatch') {
+           html += `
+            <div class="col-span-1 md:col-span-2 mt-2 p-4 bg-red-500/10 rounded-xl border border-red-500/20 text-red-300 flex items-center justify-center gap-2 font-medium shadow-sm">
+              <i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i> 虽然基础路径相同，但携带的参数存在差异。
+            </div>
+          `;
+        } else if (isMatch) {
+           html += `
+            <div class="col-span-1 md:col-span-2 mt-2 p-4 bg-green-500/10 rounded-xl border border-green-500/20 text-green-300 flex items-center justify-center gap-2 font-bold shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+              <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i> 参数完美匹配！两个链接本质上完全等价。
+            </div>
+          `;
+        }
+      }
+
+      analysisContent.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function compareLinks() {
+      const val1 = link1Input.value;
+      const val2 = link2Input.value;
+
+      if (!val1 && !val2) {
+        updateState('empty');
+        return;
+      }
+      if (!val1 || !val2) {
+        updateState('partial');
+        return;
+      }
+
+      const parsed1 = parseCustomUrl(val1);
+      const parsed2 = parseCustomUrl(val2);
+
+      let isMatch = true;
+      let reason = '';
+
+      if (parsed1.base !== parsed2.base) {
+        isMatch = false;
+        reason = 'base_mismatch';
+      } else if (parsed1.params.length !== parsed2.params.length) {
+        isMatch = false;
+        reason = 'param_mismatch';
+      } else {
+        // 比较排序后的参数数组
+        for (let i = 0; i < parsed1.params.length; i++) {
+          if (parsed1.params[i].key !== parsed2.params[i].key || 
+              parsed1.params[i].value !== parsed2.params[i].value) {
+            isMatch = false;
+            reason = 'param_mismatch';
+            break;
+          }
+        }
+      }
+
+      updateState(isMatch ? 'match' : 'mismatch');
+      renderAnalysis(parsed1, parsed2, isMatch, reason);
+    }
+
+    // 防抖处理，提升输入体验
+    let timeoutId;
+    ['input', 'paste', 'keyup'].forEach(evt => {
+      [link1Input, link2Input].forEach(el => {
+        el.addEventListener(evt, () => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(compareLinks, 100);
+        });
+      });
+    });
+
+  </script>
 </body>
 </html>
