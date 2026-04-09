@@ -151,6 +151,13 @@
       </p>
     </header>
 
+    <div class="w-full flex justify-end px-2 md:px-0 -mb-2 md:-mb-3 relative z-20">
+      <button id="clear-btn" class="p-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-700/80 hover:border-red-500/30 transition-all shadow-sm flex items-center gap-2 group backdrop-blur-md" title="一键清空">
+        <i data-lucide="trash-2" class="w-4 h-4 md:w-[18px] md:h-[18px] group-hover:scale-110 transition-transform"></i>
+        <span class="text-xs md:text-sm font-medium tracking-wide">一键清空</span>
+      </button>
+    </div>
+
     <!-- Main Content -->
     <main id="main-panel" class="glass-panel rounded-3xl p-5 md:p-6 relative w-full border-slate-700/50 transition-colors duration-500">
       
@@ -244,6 +251,7 @@
 
     const link1Input = document.getElementById('link1');
     const link2Input = document.getElementById('link2');
+    const clearBtn = document.getElementById('clear-btn');
     const indDesktop = document.getElementById('status-indicator-desktop');
     const iconDesktop = document.getElementById('status-icon-desktop');
     const resultSummary = document.getElementById('result-summary');
@@ -509,6 +517,14 @@
         });
       });
     });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        link1Input.value = '';
+        link2Input.value = '';
+        compareLinks();
+      });
+    }
 
   </script>
 </body>
