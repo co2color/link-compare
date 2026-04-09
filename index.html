@@ -398,55 +398,125 @@
           </div>
         `;
         
-        // 渲染参数列表
-        const renderParams = (params, title, diffIndices = []) => {
-          let content = `<div class="p-4 bg-slate-800/60 rounded-xl border border-slate-700 shadow-inner h-full flex flex-col max-h-[350px] md:max-h-[450px]">`;
-          content += `<div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-3 shrink-0">
-            <span class="text-slate-300 font-semibold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-slate-500"></i>${title} 参数</span>
-            <span class="px-2.5 py-0.5 rounded-full bg-slate-700/50 text-brand-400 text-xs font-bold leading-none">${params.length} 个</span>
-          </div>`;
-          
-          if (params.length === 0) {
-            content += `<div class="text-slate-500 italic text-center py-6 flex-1">无携带参数</div>`;
-          } else {
-            content += `<div class="flex flex-col gap-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">`;
-            params.forEach((p, i) => {
-              const isDiff = diffIndices.includes(i);
-              const bgClass = isDiff ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900/50 border-slate-700/50';
-              const textKeyClass = isDiff ? 'text-red-300' : 'text-slate-400';
-              const textValClass = isDiff ? 'text-red-200 font-medium' : 'text-slate-200';
-              
-              content += `
-                <div class="flex p-2 rounded-lg border ${bgClass} transition-colors">
-                  <span class="${textKeyClass} w-2/5 pr-2 opacity-90 truncate" title="${p.key}">${p.key}</span>
-                  <span class="w-4 text-center text-slate-600 mr-2">=</span>
-                  <span class="${textValClass} flex-1 break-all" title="${p.value}">${p.value || '<i class="text-slate-600 text-xs">空</i>'}</span>
-                </div>
-              `;
-            });
-            content += `</div>`;
-          }
-          content += `</div>`;
-          return content;
-        };
-
+        let aligned1 = [];
+        let aligned2 = [];
         let diffIndices1 = [];
         let diffIndices2 = [];
-        if (!isMatch && reason === 'param_mismatch') {
-          // Find mismatches in sorted arrays up to the shortest length
-          const len = Math.max(p1.params.length, p2.params.length);
-          for(let i=0; i<len; i++) {
-            const p1p = p1.params[i];
-            const p2p = p2.params[i];
-            if(!p1p || !p2p || p1p.key !== p2p.key || p1p.value !== p2p.value) {
-              if (p1p) diffIndices1.push(i);
-              if (p2p) diffIndices2.push(i);
+        
+        let i = 0, j = 0;
+        let idx = 0;
+        
+        while (i < p1.params.length || j < p2.params.length) {
+          const p1p = p1.params[i];
+          const p2p = p2.params[j];
+          
+          if (p1p && p2p && p1p.key === p2p.key) {
+            aligned1.push(p1p);
+            aligned2.push(p2p);
+            if (p1p.value !== p2p.value) {
+              diffIndices1.push(idx);
+              diffIndices2.push(idx);
             }
+            i++;
+            j++;
+          } else if (p1p && (!p2p || p1p.key < p2p.key)) {
+            aligned1.push(p1p);
+            aligned2.push(null);
+            diffIndices1.push(idx);
+            diffIndices2.push(idx);
+            i++;
+          } else {
+            aligned1.push(null);
+            aligned2.push(p2p);
+            diffIndices1.push(idx);
+            diffIndices2.push(idx);
+            j++;
           }
+          idx++;
         }
 
-        html += renderParams(p1.params, '源链接 (排序后)', diffIndices1);
-        html += renderParams(p2.params, '比对链接 (排序后)', diffIndices2);
+        const validCount1 = aligned1.filter(p => p !== null).length;
+        const validCount2 = aligned2.filter(p => p !== null).length;
+        
+        let content = `<div class="col-span-1 md:col-span-2 p-4 bg-slate-800/60 rounded-xl border border-slate-700 shadow-inner h-[400px] md:h-[500px] flex flex-col">`;
+        
+        // 统一的表头（两栏）
+        content += `
+          <div class="grid grid-cols-2 gap-4 mb-4 border-b border-slate-700 pb-3 shrink-0">
+            <div class="flex items-center justify-between pr-2">
+              <span class="text-slate-300 font-semibold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-slate-500"></i>源链接参数</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-slate-700/50 text-brand-400 text-xs font-bold leading-none">${validCount1} 个</span>
+            </div>
+            <div class="flex items-center justify-between pl-2 border-l border-slate-700/50">
+              <span class="text-slate-300 font-semibold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4 text-slate-500"></i>比对链接参数</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-slate-700/50 text-brand-400 text-xs font-bold leading-none">${validCount2} 个</span>
+            </div>
+          </div>
+        `;
+        
+        if (aligned1.length === 0) {
+          content += `<div class="text-slate-500 italic text-center py-6 flex-1">无携带参数</div>`;
+        } else {
+          // 统一的带滚动条清单
+          content += `<div class="flex flex-col gap-2 overflow-y-auto flex-1 pr-2 custom-scrollbar">`;
+          
+          for (let i = 0; i < aligned1.length; i++) {
+            const p1 = aligned1[i];
+            const p2 = aligned2[i];
+            const isDiff1 = diffIndices1.includes(i);
+            const isDiff2 = diffIndices2.includes(i);
+            
+            content += `<div class="grid grid-cols-2 gap-4">`;
+            
+            // 渲染左侧一格
+            if (!p1) {
+              content += `
+                <div class="flex p-2 rounded-lg border border-transparent opacity-40 min-h-[42px] items-center">
+                  <span class="text-slate-500 w-full text-center text-xs">-- 缺省 --</span>
+                </div>
+              `;
+            } else {
+              const bgClass = isDiff1 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900/50 border-slate-700/50';
+              const textKeyClass = isDiff1 ? 'text-red-300' : 'text-slate-400';
+              const textValClass = isDiff1 ? 'text-red-200 font-medium' : 'text-slate-200';
+              
+              content += `
+                <div class="flex p-2 rounded-lg border ${bgClass} transition-colors min-h-[42px] items-center">
+                  <span class="${textKeyClass} w-[45%] pr-2 opacity-90 truncate" title="${p1.key}">${p1.key}</span>
+                  <span class="w-4 text-center text-slate-600 mr-2 shrink-0">=</span>
+                  <span class="${textValClass} flex-1 break-all" title="${p1.value}">${p1.value || '<i class="text-slate-600 text-xs">空</i>'}</span>
+                </div>
+              `;
+            }
+            
+            // 渲染右侧一格
+            if (!p2) {
+              content += `
+                <div class="flex p-2 rounded-lg border border-transparent opacity-40 min-h-[42px] items-center">
+                  <span class="text-slate-500 w-full text-center text-xs">-- 缺省 --</span>
+                </div>
+              `;
+            } else {
+              const bgClass = isDiff2 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900/50 border-slate-700/50';
+              const textKeyClass = isDiff2 ? 'text-red-300' : 'text-slate-400';
+              const textValClass = isDiff2 ? 'text-red-200 font-medium' : 'text-slate-200';
+              
+              content += `
+                <div class="flex p-2 rounded-lg border ${bgClass} transition-colors min-h-[42px] items-center">
+                  <span class="${textKeyClass} w-[45%] pr-2 opacity-90 truncate" title="${p2.key}">${p2.key}</span>
+                  <span class="w-4 text-center text-slate-600 mr-2 shrink-0">=</span>
+                  <span class="${textValClass} flex-1 break-all" title="${p2.value}">${p2.value || '<i class="text-slate-600 text-xs">空</i>'}</span>
+                </div>
+              `;
+            }
+            
+            content += `</div>`; // close grid
+          }
+          content += `</div>`; // close scroll area
+        }
+        content += `</div>`; // close main container
+
+        html += content;
         
         if (!isMatch && reason === 'param_mismatch') {
            html += `
@@ -465,6 +535,29 @@
 
       analysisContent.innerHTML = html;
       lucide.createIcons();
+      
+      // 同步参数列表滚动条
+      const scrollPanes = analysisContent.querySelectorAll('.sync-scroll');
+      if (scrollPanes.length === 2) {
+        let isSyncingLeft = false;
+        let isSyncingRight = false;
+        
+        scrollPanes[0].addEventListener('scroll', function() {
+          if (!isSyncingLeft) {
+            isSyncingRight = true;
+            scrollPanes[1].scrollTop = this.scrollTop;
+          }
+          isSyncingLeft = false;
+        });
+        
+        scrollPanes[1].addEventListener('scroll', function() {
+          if (!isSyncingRight) {
+            isSyncingLeft = true;
+            scrollPanes[0].scrollTop = this.scrollTop;
+          }
+          isSyncingRight = false;
+        });
+      }
     }
 
     function compareLinks() {
